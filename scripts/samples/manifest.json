@@ -1,0 +1,69 @@
+{
+  "note": "Generated sample receipts for demo only. Not real documents.",
+  "ground_truth": [
+    {
+      "file": "r01_harbour_cafe.png",
+      "client": "Harbour Cafe",
+      "vendor": "Harbour Cafe",
+      "date": "12/10/2026",
+      "total": 7.0,
+      "vat": 0.95
+    },
+    {
+      "file": "r02_athlone_office.png",
+      "client": "Harbour Cafe",
+      "vendor": "Athlone Office Supplies",
+      "date": "14/10/2026",
+      "total": 56.35,
+      "vat": 12.96
+    },
+    {
+      "file": "r03_greenway_taxi.png",
+      "client": "Meadow Studio",
+      "vendor": "Greenway Taxis",
+      "date": "15/10/2026",
+      "total": 46.0,
+      "vat": 6.21
+    },
+    {
+      "file": "r04_printbarn.png",
+      "client": "Meadow Studio",
+      "vendor": "PrintBarn",
+      "date": "18/10/2026",
+      "total": 101.5,
+      "vat": 23.35
+    },
+    {
+      "file": "r05_lough_rea.png",
+      "client": "Meadow Studio",
+      "vendor": "Lough Rea Fuels",
+      "date": "20/10/2026",
+      "total": 62.44,
+      "vat": 8.43
+    },
+    {
+      "file": "r06_cloudnine_hosting.png",
+      "client": "Oranmore Physio",
+      "vendor": "CloudNine Hosting",
+      "date": "21/10/2026",
+      "total": 143.88,
+      "vat": 33.09
+    },
+    {
+      "file": "r07_bru_hardware.png",
+      "client": "Oranmore Physio",
+      "vendor": "Bru Hardware",
+      "date": "24/10/2026",
+      "total": 73.74,
+      "vat": 16.96
+    },
+    {
+      "file": "r08_centra.png",
+      "client": "Oranmore Physio",
+      "vendor": "Centra Oranmore",
+      "date": "27/10/2026",
+      "total": 21.36,
+      "vat": null
+    }
+  ]
+}

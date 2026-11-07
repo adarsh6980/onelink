@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Upload receipts - OneLink Intake</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
+<div class="card">
+<h1 id="t">Upload</h1>
+<p class="sub" id="need"></p>
+<p class="small" id="due"></p>
+<label for="who">Your name or business</label>
+<input id="who" type="text" placeholder="e.g. Harbour Cafe">
+<div class="drop" id="drop">Drop receipt photos here, or tap to choose (PNG or JPG, up to 5 MB each)<input id="pick" type="file" accept="image/png,image/jpeg" multiple hidden></div>
+<div id="log"></div>
+<p class="small" style="margin-top:14px">No account is created. Files are visible only to the owner of this link. Uploads close when the link expires, and stored files are deleted in the next hourly cleanup.</p>
+</div>
+</div>
+<script>
+const slug = location.pathname.split('/').pop();
+let queue = [];
+(async () => {
+  const r = await fetch('/api/request/' + slug).then(r => r.json());
+  if (r.error) { t.textContent = r.error; need.textContent = ''; return; }
+  t.textContent = r.title;
+  need.textContent = r.need;
+  due.textContent = (r.due ? 'Due ' + r.due + '. ' : '') + 'Link expires ' + new Date(r.expiresAt).toDateString() + '.';
+})();
+const drop = document.getElementById('drop'), pick = document.getElementById('pick');
+drop.onclick = () => pick.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); send(e.dataTransfer.files); };
+pick.onchange = () => send(pick.files);
+async function send(files) {
+  if (!who.value.trim()) { alert('Add your name or business first.'); return; }
+  for (const f of files) {
+    const el = document.createElement('div'); el.className = 'small'; el.textContent = f.name + ' - uploading...'; log.appendChild(el);
+    const r = await fetch('/api/upload/' + slug + '?filename=' + encodeURIComponent(f.name) + '&uploader=' + encodeURIComponent(who.value.trim()), { method: 'POST', body: f });
+    const j = await r.json().catch(() => ({}));
+    el.textContent = f.name + (r.ok ? ' - received, thank you.' : ' - failed: ' + (j.error || r.status));
+  }
+}
+</script></body></html>

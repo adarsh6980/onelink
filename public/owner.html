@@ -1,0 +1,66 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Owner dashboard - OneLink Intake</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
+<div class="card">
+<h1 id="t">Request</h1>
+<p class="sub" id="meta"></p>
+<div class="note">Extraction below is local OCR plus rules. Low-confidence and missing fields need your check: mark each upload reviewed before you trust the CSV. Nothing here is financial advice.</div>
+<div id="checklist"></div>
+<button id="csv">Export CSV</button>
+<span class="small" id="csvnote"></span>
+</div>
+<div id="uploads"></div>
+</div>
+<script>
+const token = location.pathname.split('/').pop();
+const BL = { high: ['b-high','confident'], low: ['b-low','check'], unreadable: ['b-low','unreadable'], missing: ['b-missing','missing'], 'not found': ['b-missing','not on receipt'] };
+const badge = c => { const b = BL[c]; return b ? `<span class="badge ${b[0]}">${b[1]}</span>` : ''; };
+function esc(s){ const d=document.createElement('div'); d.textContent=s??''; return d.innerHTML; }
+async function load() {
+  const r = await fetch('/api/owner/' + token).then(r => r.json());
+  if (r.error) { t.textContent = r.error; return; }
+  t.textContent = r.title;
+  meta.textContent = (r.due ? 'Due ' + r.due + ' · ' : '') + (r.expired ? 'Expired' : 'Expires ' + new Date(r.expiresAt).toDateString()) + ' · upload link: ' + location.origin + r.uploadPath;
+  const got = r.clients.filter(c => c.received), miss = r.clients.filter(c => !c.received);
+  checklist.innerHTML = '<h2>Client checklist</h2>' +
+    (got.length ? '<ul class="ok-list">' + got.map(c => '<li>' + esc(c.name) + ' - received</li>').join('') + '</ul>' : '') +
+    (miss.length ? '<ul class="miss-list">' + miss.map(c => '<li>' + esc(c.name) + ' - still missing</li>').join('') + '</ul>' : '<p class="small">Everyone has sent something.</p>');
+  csvnote.textContent = r.uploads.some(u => !u.review?.reviewed) ? 'Only reviewed uploads appear in the CSV: ' + r.uploads.filter(u => !u.review?.reviewed).length + ' still need review.' : 'All uploads reviewed.';
+  uploads.innerHTML = '<div class="card"><h2>Uploads (' + r.uploads.length + ')</h2></div>' + r.uploads.map(u => {
+    const o = u.ocr || {}, rv = u.review || {};
+    const val = (k) => esc(rv.reviewed || rv[k] != null ? rv[k] ?? '' : o[k] ?? '');
+    return `<div class="card up" data-id="${u.id}">
+      <div class="row"><b>${esc(u.name)}</b><span class="badge ${rv.reviewed ? 'b-rev' : 'b-pend'}">${rv.reviewed ? 'reviewed' : (u.status === 'extracted' ? 'needs review' : u.status)}</span></div>
+      <p class="small">${esc(u.uploader)} · ${new Date(u.uploadedAt).toLocaleString()} · ${u.status === 'processing' ? 'extraction in progress' : u.status === 'extract_failed' ? 'extraction failed - enter fields manually' : 'engine: ' + esc(u.ocr_engine || 'unknown')}</p>
+      <img src="/api/file/${token}/${u.id}" alt="receipt">
+      <div class="grid">
+        <div class="field"><label>Vendor</label><input type="text" name="vendor" value="${val('vendor')}">${badge(o.vendor_conf)}</div>
+        <div class="field"><label>Date</label><input type="text" name="date" value="${val('date')}">${badge(o.date_conf)}</div>
+        <div class="field"><label>Total (EUR)</label><input type="text" name="total" value="${val('total')}">${badge(o.total_conf)}</div>
+        <div class="field"><label>VAT (EUR)</label><input type="text" name="vat" value="${val('vat')}">${badge(o.vat_conf)}</div>
+      </div>
+      <button onclick="save('${u.id}', this)">Save and mark reviewed</button>
+      <a href="/s/${token}/${u.id}" style="font-size:13px;margin-left:10px">Split this receipt</a>
+    </div>`;
+  }).join('');
+}
+async function save(id, btn) {
+  const card = uploads.querySelector(`[data-id="${id}"]`);
+  const g = n => card.querySelector(`[name="${n}"]`).value.trim();
+  const r = await fetch(`/api/review/${token}/${id}`, { method: 'POST', body: JSON.stringify({ vendor: g('vendor'), date: g('date'), total: g('total'), vat: g('vat'), reviewed: true }) }).then(r => r.json());
+  if (r.ok) load(); else alert(r.error || 'save failed');
+}
+document.getElementById('csv').onclick = async () => {
+  const r = await fetch('/api/export/' + token);
+  if (r.status === 409) {
+    const e = await r.json();
+    alert(e.error + ': ' + (e.unreviewed || []).join(', ') + '. Review and save each one first; nothing unreviewed is exported.');
+    return;
+  }
+  if (!r.ok) return alert('Export failed');
+  const blob = await r.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'onelink-export.csv'; a.click();
+  URL.revokeObjectURL(a.href);
+};
+load();
+</script></body></html>

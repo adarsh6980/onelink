@@ -1,0 +1,5 @@
+data/
+server.log
+*.bak
+__pycache__/
+.DS_Store

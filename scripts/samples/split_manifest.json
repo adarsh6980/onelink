@@ -1,0 +1,76 @@
+{
+  "note": "Generated sample receipts for demo only. Not real documents.",
+  "ground_truth": [
+    {
+      "file": "s01_lidl.png",
+      "vendor": "Lidl Oranmore",
+      "date": "05/11/2026",
+      "total_cents": 906,
+      "items": [
+        {
+          "name": "Whole milk 2L",
+          "qty": 2,
+          "cents": 310
+        },
+        {
+          "name": "Sourdough bread",
+          "qty": 1,
+          "cents": 189
+        },
+        {
+          "name": "Pizza Margherita",
+          "qty": 1,
+          "cents": 249
+        },
+        {
+          "name": "Bananas 1kg",
+          "qty": 1,
+          "cents": 129
+        },
+        {
+          "name": "Chocolate bar",
+          "qty": 1,
+          "cents": 89
+        },
+        {
+          "name": "Multibuy discount",
+          "qty": 1,
+          "cents": -60
+        }
+      ]
+    },
+    {
+      "file": "s02_dunnes.png",
+      "vendor": "Dunnes Stores",
+      "date": "04/11/2026",
+      "total_cents": 1804,
+      "items": [
+        {
+          "name": "Chicken fillets 500g",
+          "qty": 1,
+          "cents": 549
+        },
+        {
+          "name": "Basmati rice 1kg",
+          "qty": 1,
+          "cents": 275
+        },
+        {
+          "name": "Coke 2L",
+          "qty": 2,
+          "cents": 450
+        },
+        {
+          "name": "Crisps multipack",
+          "qty": 1,
+          "cents": 320
+        },
+        {
+          "name": "Apples 6pk",
+          "qty": 1,
+          "cents": 210
+        }
+      ]
+    }
+  ]
+}

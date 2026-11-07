@@ -1,0 +1,143 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Split receipt - OneLink Intake</title><link rel="stylesheet" href="/style.css">
+<style>
+.item { border: 1px solid #eae9ea; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+.item .who { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.who label { display: inline-flex; align-items: center; gap: 4px; font-weight: 400; font-size: 13px; margin: 0; background: #f8f5f2; border-radius: 999px; padding: 4px 10px; }
+.who input { width: auto; }
+.price { width: 90px; }
+.owes li { font-size: 15px; margin-left: 18px; }
+</style></head><body><div class="wrap">
+<div class="card">
+<h1 id="t">Split receipt</h1>
+<p class="sub" id="meta"></p>
+<div class="note" id="engine"></div>
+<div class="warn" id="discrep" hidden></div>
+<div class="warn" id="photo" hidden></div>
+<label>Who is splitting? (names, comma separated)</label>
+<input id="names" type="text" placeholder="e.g. Alex, Niamh, Sean">
+<label>Who paid?</label>
+<select id="payer"></select>
+</div>
+<div class="card">
+<h2>Items</h2>
+<p class="small">Check the read items and fix anything wrong, then tick who each item belongs to. Unticked items are not split.</p>
+<div id="items"></div>
+<button class="ghost" id="equal">Split the whole bill equally</button>
+</div>
+<div class="card">
+<h2>Result</h2>
+<div id="result"><p class="small">Nothing saved yet.</p></div>
+<button id="save">Save and calculate</button>
+<button class="ghost" id="csv">Export split CSV</button>
+</div>
+</div>
+<script>
+const parts = location.pathname.split('/');
+const token = parts[2], upId = parts[3];
+const eur = c => (c < 0 ? '-\u20AC' : '\u20AC') + (Math.abs(c) / 100).toFixed(2);
+let state = null;
+function esc(s){ const d=document.createElement('div'); d.textContent=s??''; return d.innerHTML; }
+async function load() {
+  const r = await fetch(`/api/split/${token}/${upId}`).then(r => r.json());
+  if (r.error) { t.textContent = r.error; return; }
+  state = r;
+  if (r.status === 'processing') { setTimeout(load, 1500); }
+  meta.textContent = (r.vendor || r.file) + ' · receipt total ' + (r.receiptCents == null ? 'unknown' : eur(r.receiptCents) + ' (' + r.totalSource + ')') + ' · items sum ' + eur(r.itemSumCents);
+  engine.textContent = r.engine ? 'Items read by ' + r.engine + '. The split arithmetic is done by this app, not by the model.' : 'Extraction pending.';
+  const photoEl = document.getElementById('photo');
+  if (r.photoWarning) { photoEl.hidden = false; photoEl.textContent = r.photoWarning; } else { photoEl.hidden = true; }
+  if (r.sumMatchesReceipt === false) {
+    discrep.hidden = false;
+    discrep.textContent = 'The items add up to ' + eur(r.itemSumCents) + ' but the receipt total reads ' + eur(r.receiptCents) + '. Fix the item prices below until they match, or the split will not cover the bill.';
+  }
+  names.value = (r.split.names || []).join(', ');
+  renderPayer();
+  renderItems();
+  renderResult();
+}
+function renderPayer() {
+  const list = (names.value.split(',').map(s => s.trim()).filter(Boolean));
+  payer.innerHTML = '<option value="">choose payer</option>' + list.map(n => `<option ${state.split.payer === n ? 'selected' : ''}>${esc(n)}</option>`).join('');
+}
+names.onchange = renderPayer;
+function renderItems() {
+  const list = names.value.split(',').map(s => s.trim()).filter(Boolean);
+  items.innerHTML = state.items.map(it => {
+    const a = state.split.equalAll ? list : ((state.split.assignments || {})[it.id] || []);
+    return `<div class="item" data-id="${it.id}">
+      <div class="row"><b>${esc(it.name)}</b><span class="small">line total &euro;<input class="price" type="number" step="0.01" value="${(it.cents/100).toFixed(2)}"> qty ${it.qty} (already included in the line total)</span></div>
+      ${it.warn ? `<div class="small" style="color:#a33">${esc(it.warn)}</div>` : ''}
+      <div class="who">${list.map(n => `<label><input type="checkbox" ${a.includes(n) ? 'checked' : ''} data-n="${esc(n)}">${esc(n)}</label>`).join('')}</div>
+    </div>`;
+  }).join('') || '<p class="small">No items could be read from this receipt.</p>';
+}
+names.oninput = () => { renderPayer(); renderItems(); };
+document.getElementById('equal').onclick = () => { state.split.equalAll = true; save(); };
+async function save() {
+  const list = names.value.split(',').map(s => s.trim()).filter(Boolean);
+  const assignments = {};
+  document.querySelectorAll('#items .item').forEach(el => {
+    const id = el.dataset.id;
+    assignments[id] = [...el.querySelectorAll('input[type=checkbox]:checked')].map(c => c.dataset.n);
+  });
+  const itemEdits = [...document.querySelectorAll('#items .item')].map(el => ({ id: el.dataset.id, cents: Math.round(parseFloat(el.querySelector('.price').value) * 100) }));
+  const r = await fetch(`/api/split/${token}/${upId}`, { method: 'POST', body: JSON.stringify({ names: list, payer: payer.value, assignments, items: itemEdits, equalAll: state.split.equalAll }) }).then(r => r.json());
+  if (!r.ok) { alert(r.error || 'save failed'); return; }
+  state.split = r.split; state.items = r.items; state.computed = r.computed;
+  state.receiptCents = r.receiptCents; state.itemSumCents = r.itemSumCents; state.sumMatchesReceipt = r.sumMatchesReceipt;
+  state.confirmed = r.confirmed; state.staleConfirmation = r.staleConfirmation;
+  state.split.equalAll = false;
+  load();
+}
+async function confirmReading() {
+  const list = names.value.split(',').map(s => s.trim()).filter(Boolean);
+  const assignments = {};
+  document.querySelectorAll('#items .item').forEach(el => {
+    assignments[el.dataset.id] = [...el.querySelectorAll('input[type=checkbox]:checked')].map(c => c.dataset.n);
+  });
+  const r = await fetch(`/api/split/${token}/${upId}`, { method: 'POST', body: JSON.stringify({ names: list, payer: payer.value, assignments, equalAll: state.split.equalAll, confirm: true }) }).then(r => r.json());
+  if (!r.ok) { alert(r.error || 'confirmation failed'); return; }
+  load();
+}
+function renderResult() {
+  const c = state.computed;
+  if (!c || !Object.keys(c.perPerson).length) { result.innerHTML = '<p class="small">Add names and assign items.</p>'; document.getElementById('csv').style.display = 'none'; return; }
+  const mismatched = state.sumMatchesReceipt === false;
+  const sumsOk = !c.unassigned.length && !mismatched;
+  const complete = sumsOk && state.confirmed;
+  let html = '';
+  if (!complete) {
+    html += '<div class="warn"><b>Provisional preview - not the final split.</b> ' +
+      (c.unassigned.length ? c.unassigned.length + ' item(s) not assigned yet (' + eur(c.unassignedCents) + '): ' + c.unassigned.map(esc).join(', ') + '. ' : '') +
+      (mismatched ? 'Items add up to ' + eur(state.itemSumCents) + ' but the receipt total reads ' + eur(state.receiptCents) + ' - fix the item prices first. ' : '') +
+      'Shares below will change.</div>';
+    if (sumsOk && !state.confirmed) {
+      html += '<div class="warn"><b>One manual check left.</b> Matching sums do not prove the read was complete or the total correct. Check the receipt itself: is the total <b>' + eur(state.receiptCents) + '</b> right, and are all <b>' + state.items.length + '</b> lines listed above - nothing missed, nothing extra? ' +
+        (state.staleConfirmation ? '<b>Items or the total changed since the last confirmation - check again.</b> ' : '') +
+        '</div><button id="confirmBtn">I checked the receipt - the total and item list are correct</button>';
+    }
+    html += '<ul class="owes">' + Object.entries(c.perPerson).map(([n, cents]) =>
+      `<li>${esc(n)}: <b>${eur(cents)}</b> so far</li>`).join('') + '</ul>';
+  } else {
+    html += '<ul class="owes">' + Object.entries(c.perPerson).map(([n, cents]) => {
+      if (c.payer && n !== c.payer && cents > 0) return `<li>${esc(n)} owes ${esc(c.payer)} <b>${eur(cents)}</b></li>`;
+      if (c.payer && n === c.payer) return `<li>${esc(n)} paid; their own share is <b>${eur(cents)}</b></li>`;
+      return `<li>${esc(n)}: <b>${eur(cents)}</b></li>`;
+    }).join('') + '</ul>';
+    html += `<p class="small">Split total ${eur(c.totalCents)} matches the receipt total. Every item is assigned. Receipt total and item-list completeness confirmed by a person.</p>`;
+  }
+  result.innerHTML = html;
+  const cb = document.getElementById('confirmBtn');
+  if (cb) cb.onclick = confirmReading;
+  document.getElementById('csv').style.display = complete ? '' : 'none';
+}
+document.getElementById('save').onclick = save;
+document.getElementById('csv').onclick = async () => {
+  const r = await fetch(`/api/split-csv/${token}/${upId}`);
+  if (!r.ok) { const e = await r.json().catch(() => ({})); alert(e.error || 'export failed'); return; }
+  const blob = await r.blob(); const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'onelink-split.csv'; a.click(); URL.revokeObjectURL(a.href);
+};
+load();
+</script></body></html>

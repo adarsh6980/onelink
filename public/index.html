@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OneLink Intake - local demo</title><link rel="stylesheet" href="/style.css"></head><body><div class="wrap">
+<div class="card">
+<h1>OneLink Intake</h1>
+<p class="sub">Collect receipts through one link. No accounts, on either side. Local demo build.</p>
+<div class="note">Demo only. All sample documents are generated locally and are not real receipts. Extraction here is local OCR plus simple rules, so you can see uncertainty and review it; the production version would run a document model on Vultr.</div>
+<label for="title">Request title</label>
+<input id="title" type="text" value="October receipts and invoices">
+<label for="need">What should people upload?</label>
+<textarea id="need" rows="2">A clear photo or scan of each receipt or invoice: vendor, date, total and VAT visible.</textarea>
+<label for="clients">Expected clients (one per line)</label>
+<textarea id="clients" rows="3">Harbour Cafe
+Meadow Studio
+Oranmore Physio</textarea>
+<label for="due">Due date</label>
+<input id="due" type="date" value="2026-11-30">
+<button id="go">Create request</button>
+</div>
+<div class="card">
+<h2>Split a receipt</h2>
+<p class="sub">Just want to split one bill? Drop a receipt photo here: check the items, choose who shares each, see what everyone owes.</p>
+<div class="drop" id="sdrop">Drop a receipt photo here, or tap to choose (PNG or JPG, up to 5 MB)<input id="spick" type="file" accept="image/png,image/jpeg" hidden></div>
+<div id="slog"></div>
+</div>
+<div class="card" id="result" hidden>
+<h2>Your two links</h2>
+<p class="small">Hand the upload link to clients. Keep the owner link secret: anyone holding it has full control, and losing it means losing access.</p>
+<label>Upload link (share this)</label><div class="linkbox" id="uplink"></div>
+<label>Owner link (keep private)</label><div class="linkbox" id="ownlink"></div>
+<p class="small" id="exp"></p>
+</div>
+</div>
+<script>
+const sdrop = document.getElementById('sdrop'), spick = document.getElementById('spick');
+sdrop.onclick = () => spick.click();
+sdrop.ondragover = e => { e.preventDefault(); sdrop.classList.add('over'); };
+sdrop.ondragleave = () => sdrop.classList.remove('over');
+sdrop.ondrop = e => { e.preventDefault(); sdrop.classList.remove('over'); ssend(e.dataTransfer.files); };
+spick.onchange = () => ssend(spick.files);
+async function ssend(files) {
+  if (!files || !files.length) return;
+  const el = document.createElement('div'); el.className = 'small'; el.textContent = files[0].name + ' - uploading...'; slog.appendChild(el);
+  const req = await fetch('/api/requests', { method: 'POST', body: JSON.stringify({ title: 'Receipt split', need: '', clients: [], due: '', mode: 'split' }) }).then(r => r.json());
+  if (req.error) { el.textContent = 'failed: ' + req.error; return; }
+  const slug = req.uploadPath.split('/').pop();
+  const token = req.ownerPath.split('/').pop();
+  const up = await fetch('/api/upload/' + slug + '?filename=' + encodeURIComponent(files[0].name) + '&uploader=' + encodeURIComponent('me'), { method: 'POST', body: files[0] }).then(r => r.json());
+  if (up.error) { el.textContent = 'failed: ' + up.error; return; }
+  el.textContent = files[0].name + ' - reading items...';
+  location.href = '/s/' + token + '/' + up.id;
+}
+document.getElementById('go').onclick = async () => {
+  const body = {
+    title: title.value, need: need.value,
+    clients: clients.value.split('\n').map(s => s.trim()).filter(Boolean),
+    due: due.value,
+  };
+  const r = await fetch('/api/requests', { method: 'POST', body: JSON.stringify(body) }).then(r => r.json());
+  if (r.error) return alert(r.error);
+  const base = location.origin;
+  uplink.textContent = base + r.uploadPath;
+  ownlink.textContent = base + r.ownerPath;
+  exp.textContent = 'Access ends ' + new Date(r.expiresAt).toDateString() + (r.expiryNote ? ' - ' + r.expiryNote : '') + ' Stored files are deleted in the next hourly cleanup after expiry.';
+  result.hidden = false;
+  result.scrollIntoView({ behavior: 'smooth' });
+};
+</script></body></html>
