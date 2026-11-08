@@ -3,7 +3,7 @@
 <div class="card">
 <h1>OneLink Intake</h1>
 <p class="sub">Collect receipts through one link. No accounts, on either side. Local demo build.</p>
-<div class="note">Demo only. All sample documents are generated locally and are not real receipts. Extraction here is local OCR plus simple rules, so you can see uncertainty and review it; the production version would run a document model on Vultr.</div>
+<div class="note">Demo only. All sample documents are generated locally and are not real receipts. Extraction runs on this machine with a local neural OCR engine (PP-OCRv4) plus a classical fallback, so you can see uncertainty and review it. Nothing is sent to a cloud model.</div>
 <label for="title">Request title</label>
 <input id="title" type="text" value="October receipts and invoices">
 <label for="need">What should people upload?</label>

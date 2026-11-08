@@ -1,39 +1,46 @@
-# Demo video script (~90 seconds, screen recording + voiceover)
+# Demo video script (~30 seconds, screen capture + captions)
 
-## 1. The problem (10s)
-Screen: calendar or spreadsheet.
-"My bookkeeper collects the same receipts from the same clients every month,
-by email and text. It's nobody's favourite job."
+The recorded demo (`onelink-demo.mp4`) walks through the split-a-receipt flow end
+to end on a local build. It uses only generated sample receipts
+(`scripts/samples/`), never a real document.
 
-## 2. Create the request (15s)
-Screen: create page. Fill title "October receipts and invoices", three clients, due date.
-"She makes one request and gets one link. No account for her, no account for her clients."
-Click create. Highlight the two links: upload link, private owner link.
+## Scene list
 
-## 3. Client uploads (20s)
-Screen: upload page, ideally in a phone-sized frame.
-"The client opens the link, types their name, drops the receipt photos. Done."
-Drop two sample receipts. Show the confirmations.
-On-screen note: "All receipts shown are generated samples, not real documents."
+1. **Home page (3s)** - "OneLink Intake - split a shared receipt from one photo.
+   No accounts on either side." Shows the intake form and the split drop zone.
+2. **Upload (2s)** - "Drop a receipt photo. Everything runs on this machine."
+   A generated Lidl sample receipt is dropped into the split drop zone.
+3. **Extraction (4s)** - "Local PP-OCRv4 neural OCR reads the items - no cloud
+   model." The split page shows the read items, the receipt total and the engine
+   note ("Items read by rapidocr-local..."). The item sum is shown against the
+   receipt total.
+4. **Assignment (4s)** - "People choose who shares each item. The AI never
+   assigns ownership." Names are entered, the payer is chosen, and each item is
+   ticked for the people who share it. The model only reads; people decide.
+5. **Confirmation gate (3.5s)** - "A person confirms the receipt total before
+   the split is final." The provisional preview and the manual-check prompt are
+   shown; matching sums alone do not finalize anything.
+6. **Result (4s)** - "Deterministic cent arithmetic computes shares - no model
+   in the money path." Final per-person shares with the confirmation line:
+   split total matches the receipt total, every item assigned.
+7. **CSV export (4s)** - "Reconciliation - the split total must match the
+   receipt total before export." The exported CSV includes per-item assignments,
+   per-person shares and a reconciliation row.
+8. **Architecture card (5s)** - closing card: local neural OCR + classical
+   fallback (fully offline); people choose ownership; deterministic cent
+   arithmetic; human confirmation gate + reconciliation; Node + SQLite, no
+   external services.
 
-## 4. Extraction and honest uncertainty (20s)
-Screen: owner dashboard. Scroll the uploads.
-"Each receipt is read automatically. Every field says how sure the system is:
-confident, check, unreadable, or not on the receipt at all."
-Pause on a receipt with an amber "unreadable" VAT badge and the red "not on receipt" one.
-"It never invents a number. If it can't read the VAT, it says so."
+## How it was produced
 
-## 5. Review and export (15s)
-Fix the VAT value, save as reviewed.
-"The bookkeeper reviews everything - only reviewed uploads can be exported."
-Click Export CSV. Open the CSV. Show vendor/date/total/VAT columns.
+- `scripts/demo.sh` seeds the local app; the split flow itself needs no seeding.
+- The browser is driven through the real UI (no mocked screens): upload a sample
+  via the split drop zone, wait for extraction, fill names/payer, tick items,
+  save, confirm, export.
+- Captions are burned in; there is no voiceover. All receipts shown are
+  generated samples, not real documents.
 
-## 6. Close (10s)
-Screen: checklist, everyone received.
-"One link in, one spreadsheet out. Running on Vultr, files delete themselves when
-the link expires. Thanks."
+## If a voiceover is wanted later
 
-## Recording notes
-- Narration can be text-to-speech or recorded voice; presenter's choice.
-- Phone frame for the upload step: narrow browser window (~390px) is enough.
-- Total footage needed: one clean run of scripts/demo.sh plus these six shots.
+The eight captions above double as the narration lines, in order. Total runtime
+is ~30 seconds.
