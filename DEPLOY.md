@@ -1,7 +1,7 @@
 # Deploying OneLink Intake on Vultr
 
-OneLink Intake is a single Node.js process with an embedded SQLite database. It
-needs no external services: OCR runs on the same machine.
+OneLink Intake is a single Node.js process storing its data as JSON files under
+`data/`. It needs no external services: OCR runs on the same machine.
 
 ## Server
 
@@ -34,7 +34,7 @@ nginx + certbot) in front for TLS. Restrict the firewall to 80/443/SSH.
 
 ## Data
 
-- Uploads live under `data/files/`; SQLite lives under `data/`.
+- Uploads live under `data/files/`; request/split state lives as JSON under `data/`.
 - Expired links delete their files automatically. No external storage is used.
 
 ## Teardown

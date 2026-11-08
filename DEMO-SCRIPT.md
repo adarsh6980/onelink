@@ -26,10 +26,10 @@ to end on a local build. It uses only generated sample receipts
 7. **CSV export (4s)** - "Reconciliation - the split total must match the
    receipt total before export." The exported CSV includes per-item assignments,
    per-person shares and a reconciliation row.
-8. **Architecture card (5s)** - closing card: local neural OCR + classical
-   fallback (fully offline); people choose ownership; deterministic cent
-   arithmetic; human confirmation gate + reconciliation; Node + SQLite, no
-   external services.
+8. **Architecture card (5s)** - closing card: PP-OCRv4 neural OCR + classical
+   fallback, no external model API; people choose ownership; deterministic
+   cent arithmetic; human confirmation gate + reconciliation; Node.js with
+   JSON file storage on one VM, no external services.
 
 ## How it was produced
 
